@@ -36,8 +36,12 @@ class MainWindow():
         self.label_file_count.pack()
 
         self.var_win = tk.IntVar()
-        self.checkbox_win=tk.Checkbutton(self.frame1, text="Sprawdzaj max/min dla PPE", variable=self.var_win)
+        self.checkbox_win=tk.Checkbutton(self.frame1, text="Sprawdzaj max/min dla PPE", variable=self.var_win, command=lambda: self.label_state(self.var_win.get()))
         self.checkbox_win.pack(anchor="e")
+
+        self.win_count=tk.StringVar()
+        self.win_entry=tk.Entry(self.frame1, textvariable=self.win_count, state="disabled")
+        self.win_entry.pack(anchor="e")
 
         self.var_SE = tk.IntVar()
         self.checkbox_SE=tk.Checkbutton(self.frame1, text="Nie uwzględniaj sprzedawców kompleksowych", variable=self.var_SE)
@@ -80,6 +84,13 @@ class MainWindow():
         global imported_files
         imported_files = files_dir
 
+    def label_state(self,checkbox_status):
+        if checkbox_status == 1:
+            self.win_entry.configure(state='normal')
+        else:
+            self.win_entry.configure(state='disabled')
+
+
     def choose_save_location(self):
         global location
         location=filedialog.askdirectory()
@@ -103,19 +114,26 @@ class MainWindow():
         
         if self.var_win.get()==1:
             windsor_sheet = result_excel.add_worksheet('Winsor')
-            windsor_sheet.write('A1', 'Kod PPE z windsora')
+            windsor_sheet.write('A1', 'Kod PPE z Win_max')
             windsor_sheet.write('B1', 'Max value')
-            windsor_sheet.write('C1', 'Min value')
+
+            windsor_sheet.write('D1', 'Kod PPE Win_min')
+            windsor_sheet.write('E1', 'Min value')
             row=1
-            for (n,m,v) in zip(value[2],value[3],value[4]):
+            for (n,m,v,b) in zip(value[2],value[3],value[4],value[5]):
                 windsor_sheet.write(row,0,n)
                 windsor_sheet.write(row,1,m)
-                windsor_sheet.write(row,2,v)
+                windsor_sheet.write(row,3,v)
+                windsor_sheet.write(row,4,b)
                 row+=1
         result_excel.close()
     
     def start(self,excel_files,location):
-        self.result_file(location, self.data_extraction(excel_files))
+        try:
+            self.result_file(location, self.data_extraction(excel_files))
+        except NameError:
+            tk.messagebox.showwarning("Uwaga", "Location not defined!")
+            return
         
     def cell_info(self, cell):
         a = cell.row
@@ -135,13 +153,21 @@ class MainWindow():
             return False
 
     def data_extraction(self, excel_files):
+
+        try:
+            int(self.win_count.get())
+        except TypeError:
+            tk.messagebox.showerror("Błąd","Naucz się cyferek i spróbuj raz jeszcze!")
+            return
+
         #checboxes=[(self.var1.get(),'FF90EE90'),(self.var2.get(),'FFC70000'),(self.var3.get(),'FF6464FE'),(self.var4.get(),'FFEF0095'),(self.var5.get(),'FF64FEFE'),(self.var6.get(),'FFC7C7C7')]
         checboxes=[self.var1.get(),self.var2.get(),self.var3.get(),self.var4.get(),self.var5.get(),self.var6.get(),self.var7.get()]
         hexacodes=['FF90EE90','FFC70000','FF6464FE','FFEF0095','FF64FEFE','FFC7C7C7','00000000']
 
         values_taken=[]
         tariff_taken=[]
-        windsor_taken=[]
+        windsor_taken_max_PPE=[]
+        windsor_taken_min_PPE=[]
         windsor_taken_max=[]
         windsor_taken_min=[]
 
@@ -242,20 +268,53 @@ class MainWindow():
                                     i_value= i/winds_sr
                                 except ZeroDivisionError:
                                     i_value=1
-                                    
-                                if i_value > i_max_value:
-                                    i_max_value = i_value
-                                        
-                                if i_value < i_min_value:
-                                    i_min_value = i_value
-                            if PPE_number_winds not in windsor_taken:
-                                windsor_taken.append(PPE_number_winds)
-                                windsor_taken_max.append(i_max_value)
-                                windsor_taken_min.append(i_min_value)
                                 
+                                if i_value > i_max_value and len(windsor_taken_max_PPE)<int(self.win_count.get()):
+                                    i_max_value = i_value
+                                    if PPE_number_winds not in windsor_taken_max_PPE:
+                                        windsor_taken_max_PPE.append(PPE_number_winds)
+                                        windsor_taken_max.append(i_max_value)
+                                    else:
+                                        i_index=windsor_taken_max_PPE.index(PPE_number_winds)
+                                        if windsor_taken_max[i_index]<i_max_value:
+                                            windsor_taken_max[i_index]=i_max_value 
+                                elif i_value > i_max_value and len(windsor_taken_max_PPE)==int(self.win_count.get()):
+                                    i_max_value = i_value
+                                    if PPE_number_winds in windsor_taken_max_PPE:
+                                        i_index=windsor_taken_max_PPE.index(PPE_number_winds)
+                                        if windsor_taken_max[i_index]<i_max_value:
+                                            windsor_taken_max[i_index]=i_max_value                                    
+                                    else:
+                                        i_index=windsor_taken_max.index(min(windsor_taken_max))
+                                        if windsor_taken_max[i_index]<i_max_value:
+                                            windsor_taken_max[i_index]=i_max_value
+                                            windsor_taken_max_PPE[i_index]=PPE_number_winds
+
+                                if i_value < i_min_value and len(windsor_taken_min_PPE)<int(self.win_count.get()):
+                                    i_min_value = i_value
+                                    if PPE_number_winds not in windsor_taken_min_PPE:
+                                        windsor_taken_min_PPE.append(PPE_number_winds)
+                                        windsor_taken_min.append(i_min_value)
+                                    else:
+                                        i_index=windsor_taken_min_PPE.index(PPE_number_winds)
+                                        if windsor_taken_min[i_index]>i_min_value:
+                                            windsor_taken_min[i_index]=i_min_value 
+                                elif i_value < i_min_value and len(windsor_taken_min_PPE)==int(self.win_count.get()):
+                                    i_min_value = i_value
+                                    if PPE_number_winds in windsor_taken_min_PPE:
+                                        i_index=windsor_taken_min_PPE.index(PPE_number_winds)
+                                        if windsor_taken_min[i_index]>i_min_value:
+                                            windsor_taken_min[i_index]=i_min_value                                    
+                                    else:
+                                        i_index=windsor_taken_min.index(max(windsor_taken_min))
+                                        if windsor_taken_min[i_index]>i_min_value:
+                                            windsor_taken_min[i_index]=i_min_value
+                                            windsor_taken_min_PPE[i_index]=PPE_number_winds
+
                         except ValueError:
                             pass
-        return values_taken, tariff_taken, windsor_taken, windsor_taken_max, windsor_taken_min
+        
+        return values_taken, tariff_taken, windsor_taken_max_PPE, windsor_taken_max, windsor_taken_min_PPE, windsor_taken_min
 
         
 root=tk.Tk()
