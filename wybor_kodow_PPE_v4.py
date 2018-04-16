@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox, ttk
 from tkinter import filedialog
 from openpyxl import workbook, worksheet,load_workbook
 from datetime import datetime
@@ -21,7 +22,7 @@ class MainWindow():
     def __init__(self,master):
         self.master=master
         self.master.title("Nagrody za kody")
-        self.master.geometry('500x350')
+        self.master.geometry('700x500')
 
         self.frame1=tk.Frame(master)
         self.frame1.pack(fill='both', expand=True)
@@ -74,10 +75,15 @@ class MainWindow():
         self.var7 = tk.IntVar()
         self.checkbox_7=tk.Checkbutton(self.frame1, text="Zamknięta umowa - kolor biały", variable=self.var7)
         self.checkbox_7.pack(anchor="w")
-        
-        self.start_button=tk.Button(self.frame1, text="Start", command=lambda: self.start(imported_files,location))
+
+        self.start_button=tk.Button(self.frame1, text="Start", command=lambda: self.start(imported_files,location,self.progress_var))
         self.start_button.pack(anchor="s")
 
+      
+     
+
+        self.progress_var = tk.DoubleVar()
+        self.label_progress_var=tk.StringVar()
 
     def file_choose(self):
         files_dir = filedialog.askopenfilenames()
@@ -128,13 +134,24 @@ class MainWindow():
                 row+=1
         result_excel.close()
     
-    def start(self,excel_files,location):
-        try:
-            self.result_file(location, self.data_extraction(excel_files))
-        except NameError:
-            tk.messagebox.showwarning("Uwaga", "Location not defined!")
-            return
+    def start(self,excel_files,location,current_file):
+
+
+        self.progress = ttk.Progressbar(self.frame1, orient="horizontal", length=500, mode="determinate", maximum=len(excel_files), variable=current_file)
+        self.progress.pack()
+        self.progress_label=tk.Label(self.frame1, textvariable=self.label_progress_var)
+        self.progress_label.pack()
         
+
+        if self.var_win.get()==1:
+            try:
+                int(self.win_count.get())
+            except (TypeError, ValueError):
+                tk.messagebox.showerror("Błąd","Naucz się cyferek i spróbuj raz jeszcze!")
+                return
+        
+        self.result_file(location, self.data_extraction(excel_files))
+            
     def cell_info(self, cell):
         a = cell.row
         b = cell.column
@@ -142,8 +159,10 @@ class MainWindow():
 
     def SE_str_split(self,SE_name):
         try:
+            
             SE_split=list(SE_name)
-            if SE_name=="Nazwa SE" or type(SE_name)==None or SE_name=="-":
+
+            if SE_name=="Nazwa SE" or type(SE_name)==None or SE_name=="-" or len(SE_name)<15:
                 return False
             elif SE_split[12] == '5':
                 return True
@@ -152,15 +171,22 @@ class MainWindow():
         except TypeError:
             return False
 
+    def change_label_text(self, variable, text):
+        variable.set(text)
+
     def data_extraction(self, excel_files):
+        # if self.var_win.get()==1:
+        #     try:
+        #         int(self.win_count.get())
+        #     except (TypeError, ValueError):
+        #         tk.messagebox.showerror("Błąd","Naucz się cyferek i spróbuj raz jeszcze!")
+            
 
-        try:
-            int(self.win_count.get())
-        except TypeError:
-            tk.messagebox.showerror("Błąd","Naucz się cyferek i spróbuj raz jeszcze!")
-            return
-
+        
         #checboxes=[(self.var1.get(),'FF90EE90'),(self.var2.get(),'FFC70000'),(self.var3.get(),'FF6464FE'),(self.var4.get(),'FFEF0095'),(self.var5.get(),'FF64FEFE'),(self.var6.get(),'FFC7C7C7')]
+        
+        
+
         checboxes=[self.var1.get(),self.var2.get(),self.var3.get(),self.var4.get(),self.var5.get(),self.var6.get(),self.var7.get()]
         hexacodes=['FF90EE90','FFC70000','FF6464FE','FFEF0095','FF64FEFE','FFC7C7C7','00000000']
 
@@ -171,7 +197,14 @@ class MainWindow():
         windsor_taken_max=[]
         windsor_taken_min=[]
 
-        for i in excel_files:           
+        
+
+        for i in excel_files:
+            self.change_label_text(self.label_progress_var,i)
+            self.progress_var.set(excel_files.index(i)+1)
+            self.progress.update()
+            self.progress_label.update()
+         
             wb1=load_workbook(i, data_only=True) 
             ws=wb1.active
  
