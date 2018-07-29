@@ -65,7 +65,7 @@ class MainWindow():
         self.checkbox_4.pack(anchor="w")
 
         self.var5 = tk.IntVar()
-        self.checkbox_5=tk.Checkbutton(self.frame1, text="Braki schematów - kolor turkusowy", variable=self.var5)
+        self.checkbox_5 = tk.Checkbutton(self.frame1, text = "Braki schematów - kolor turkusowy", variable = self.var5)
         self.checkbox_5.pack(anchor="w")
 
         self.var6 = tk.IntVar()
@@ -79,11 +79,10 @@ class MainWindow():
         self.start_button=tk.Button(self.frame1, text="Start", command=lambda: self.start(imported_files,location,self.progress_var))
         self.start_button.pack(anchor="s")
 
-      
-     
-
         self.progress_var = tk.DoubleVar()
         self.label_progress_var=tk.StringVar()
+
+
 
     def file_choose(self):
         files_dir = filedialog.askopenfilenames()
@@ -141,7 +140,7 @@ class MainWindow():
         self.progress.pack()
         self.progress_label=tk.Label(self.frame1, textvariable=self.label_progress_var)
         self.progress_label.pack()
-        
+
 
         if self.var_win.get()==1:
             try:
